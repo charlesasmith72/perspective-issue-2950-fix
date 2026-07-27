@@ -1,12 +1,31 @@
-# FINOS Perspective — Custom Plugin HTML Export Fix
+# Perspective — Custom Plugin HTML Export Fix
 
 ## Overview
 
-This repository contains my submission for the J.P. Morgan Perspective technical exercise.
+This project fixes FINOS Perspective Issue #2950, where exporting a viewer with a custom plugin generates HTML that cannot reload that plugin correctly.
 
-The exercise asked me to explore the FINOS Perspective codebase and complete meaningful work that demonstrates technical depth, engagement with the project, implementation quality, and clear technical decision-making.
+The original export logic only stored the plugin name and assumed every plugin could be loaded as an official Perspective package. That works for built-in plugins, but fails for custom plugins because Perspective does not know the module path that defined them.
 
-I chose to address an existing open issue in the Perspective project:
+This change adds an optional module argument to `registerPlugin()`:
+
+```javascript
+await customElements
+    .get("perspective-viewer")
+    .registerPlugin(
+        "perspective-viewer-summary",
+        "./perspective-viewer-summary.js"
+    );
+```
+
+Perspective now stores both the plugin name and its module location. During HTML export, custom modules are imported and re-registered before the saved viewer layout is restored.
+
+The project also includes:
+
+* A broken example that reproduces the original issue.
+* A fixed example that uses the new module-aware registration.
+* A custom Summary renderer for testing.
+* Build and test instructions for comparing both behaviors.
+
 
 **Issue #2950 — Registering a custom plugin breaks HTML export**
 
