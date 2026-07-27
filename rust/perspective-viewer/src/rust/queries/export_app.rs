@@ -14,16 +14,47 @@ use itertools::Itertools;
 
 static VERSION: &str = env!("CARGO_PKG_VERSION");
 
-fn render_plugin(tag_name: impl AsRef<str>) -> String {
-    format!(
-        "import \"https://cdn.jsdelivr.net/npm/@perspective-dev/{0}@{1}/dist/cdn/{2}.js\";\n",
-        tag_name.as_ref().replace("perspective-", ""),
-        VERSION,
-        tag_name.as_ref(),
-    )
+pub enum ExportPlugin {
+    Package {
+        tag_name: String,
+        package: String,
+    },
+    Module {
+        tag_name: String,
+        module: String,
+    },
 }
 
-pub fn render(data: &str, layout: &str, plugins: &[String]) -> String {
+fn render_plugin(plugin: &ExportPlugin) -> String {
+    match plugin {
+        ExportPlugin::Package {
+            tag_name,
+            package,
+        } => {
+            format!(
+                "import \"https://cdn.jsdelivr.net/npm/@perspective-dev/{package}@{VERSION}/dist/cdn/{tag_name}.js\";\n"
+            )
+        }
+        ExportPlugin::Module {
+            tag_name,
+            module,
+        } => {
+            format!(
+                "import {module:?};\n\
+                await customElements.get(\"perspective-viewer\").registerPlugin(\n\
+                {tag_name:?},\n\
+                {module:?},\n\
+                );\n"
+            )
+        }
+    }
+}
+
+pub fn render(
+    data: &str,
+    layout: &str,
+    plugins: &[ExportPlugin],
+) -> String {
     let stmts = plugins.iter().map(render_plugin);
     let imports = Itertools::intersperse(stmts, " ".to_owned()).collect::<String>();
 
@@ -44,8 +75,14 @@ const bytes = new Uint8Array(len);
 for (let i = 0; i < len; i++) {{
 bytes[i] = binary_string.charCodeAt(i);
 }}
-window.viewer.load(worker.table(bytes.buffer));
-window.viewer.restore(JSON.parse(window.layout.textContent));
+const layout = JSON.parse(window.layout.textContent);
+
+await worker.table(bytes.buffer, {{
+    name: layout.table,
+}});
+
+await window.viewer.load(worker);
+await window.viewer.restore(layout);
 </script>
 <style>perspective-viewer{{position:absolute;top:0;left:0;right:0;bottom:0}}</style>
 </head>

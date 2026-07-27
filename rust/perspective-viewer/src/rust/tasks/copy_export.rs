@@ -12,28 +12,28 @@
 
 //! Copy/export side effects: render the current `View` to one of the
 //! supported [`ExportMethod`] formats and return a [`Blob`] / [`JsValue`].
-
-use std::collections::HashSet;
+ 
 
 use base64::prelude::*;
 use futures::join;
 use itertools::Itertools;
 use perspective_client::ViewWindow;
 use perspective_js::utils::*;
-use wasm_bindgen::{JsCast, JsValue};
+use wasm_bindgen::JsValue;
 
 use crate::config::ExportMethod;
-use crate::js::JsPerspectiveViewerPlugin;
 use crate::presentation::Presentation;
 use crate::queries::{export_app, get_viewer_config};
-use crate::renderer::Renderer;
+use crate::renderer::LocalKeyRcRefCellVecPluginRecordExt;
+use crate::renderer::{Renderer, PLUGIN_REGISTRY};
 use crate::session::Session;
 use crate::utils::*;
 
-fn tag_name_to_package(plugin: &JsPerspectiveViewerPlugin) -> String {
-    let tag_name = plugin.unchecked_ref::<web_sys::HtmlElement>().tag_name();
-    let tag_parts = tag_name.split('-').take(3).map(|x| x.to_lowercase());
-    Itertools::intersperse(tag_parts, "-".to_owned()).collect::<String>()
+fn tag_name_to_package(tag_name: &str) -> String {
+    tag_name
+        .strip_prefix("perspective-")
+        .unwrap_or(tag_name)
+        .to_lowercase()
 }
 
 /// Render the current view as a self-contained HTML document (Arrow data +
@@ -45,13 +45,27 @@ pub async fn html_as_jsvalue(
     presentation: &Presentation,
 ) -> ApiResult<JsValue> {
     let view_config = get_viewer_config(session, renderer, presentation);
-    let plugins = renderer
-        .get_all_plugins()
-        .iter()
-        .map(tag_name_to_package)
-        .collect::<HashSet<String>>()
-        .into_iter()
-        .collect::<Vec<_>>();
+    let plugins = PLUGIN_REGISTRY
+    .plugin_registrations()
+    .into_iter()
+    .map(|(tag_name, module)| match module {
+       Some(module) => {
+            export_app::ExportPlugin::Module {
+                tag_name,
+                module,
+            }
+        }
+        None => {
+            let package =
+                tag_name_to_package(&tag_name);
+
+            export_app::ExportPlugin::Package {
+                tag_name,
+                package,
+            }
+        }
+    })
+    .collect::<Vec<_>>();
 
     let (arrow, config) = join!(
         crate::queries::arrow_as_vec(session, true, None),

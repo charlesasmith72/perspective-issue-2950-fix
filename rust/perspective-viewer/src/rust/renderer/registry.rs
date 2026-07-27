@@ -30,6 +30,7 @@ thread_local! {
 
 pub struct PluginRecord {
     tag_name: String,
+    module: Option<String>,
     config: Rc<PluginStaticConfig>,
 }
 
@@ -71,6 +72,24 @@ pub impl LocalKey<Rc<RefCell<Vec<PluginRecord>>>> {
                 .collect()
         })
     }
+    fn plugin_registrations(
+    &'static self,
+        ) -> Vec<(String, Option<String>)> {
+            register_default();
+
+            self.with(|plugins| {
+                plugins
+                    .borrow()
+                    .iter()
+                    .map(|plugin| {
+                        (
+                            plugin.tag_name.clone(),
+                            plugin.module.clone(),
+                        )
+                    })
+                    .collect()
+            })
+        }
 
     fn default_plugin_name(&'static self) -> String {
         register_default();
@@ -105,7 +124,11 @@ pub impl LocalKey<Rc<RefCell<Vec<PluginRecord>>>> {
         })
     }
 
-    fn register_plugin(&'static self, tag_name: &str) {
+    fn register_plugin(
+        &'static self,
+        tag_name: &str,
+        module: Option<String>,
+    ) {
         assert!(
             !self.with(|plugin| plugin.borrow().iter().any(|n| n.tag_name == tag_name)),
             "Plugin Custom Element '{tag_name}' already registered"
@@ -116,6 +139,7 @@ pub impl LocalKey<Rc<RefCell<Vec<PluginRecord>>>> {
             let config = Rc::new(plugin_inst.read_static_config());
             let record = PluginRecord {
                 tag_name: tag_name.to_owned(),
+                module,
                 config,
             };
 
@@ -147,6 +171,7 @@ fn register_default() {
         if plugins.borrow().is_empty() {
             plugins.borrow_mut().push(PluginRecord {
                 tag_name: "perspective-viewer-plugin".to_owned(),
+                module: None,
                 config: Rc::new(PluginStaticConfig {
                     name: "Debug".to_owned(),
                     category: Some("Custom".to_owned()),

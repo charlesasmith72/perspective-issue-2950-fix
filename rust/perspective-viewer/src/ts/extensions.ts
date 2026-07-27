@@ -194,7 +194,10 @@ export interface PerspectiveViewerElementExt {
      * customElements.get("perspective-viewer").registerPlugin("my-plugin");
      * ```
      */
-    registerPlugin(name: string): Promise<void>;
+   registerPlugin(
+    name: string,
+    module?: string,//This is optional so the original code will still work 
+): Promise<void>;
 
     get_wasm_module(): WebAssembly.Module;
 

@@ -106,9 +106,10 @@ import type {WorkspaceConfigUpdate} from "../../src/ts/ts-rs/WorkspaceConfigUpda
 /// Register a plugin globally.
 #[wasm_bindgen]
 #[allow(non_snake_case)]
-pub fn registerPlugin(name: &str) {
+// Module Parameter stores the url
+pub fn registerPlugin(name: &str, module: Option<String>) {
     use crate::renderer::*;
-    PLUGIN_REGISTRY.register_plugin(name);
+    PLUGIN_REGISTRY.register_plugin(name, module);
 }
 
 /// Register this crate's Custom Elements in the browser's current session.
