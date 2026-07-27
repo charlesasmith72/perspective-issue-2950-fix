@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1"
+        />
+
+        <title>Custom Plugin Export Reproduction</title>
+
+        <link
+            rel="stylesheet"
+            href="/node_modules/@perspective-dev/viewer/dist/css/themes.css"
+        />
+
+        <script type="module">
+            import "/node_modules/@perspective-dev/viewer/dist/cdn/perspective-viewer.js";
+
+            import "/node_modules/@perspective-dev/viewer-datagrid/dist/cdn/perspective-viewer-datagrid.js";
+
+            import perspective from "/node_modules/@perspective-dev/client/dist/cdn/perspective.js";
+
+            import "./perspective-viewer-summary.js";
+    
+           
+            const Viewer = customElements.get(
+                "perspective-viewer",
+            );
+
+            //New API
+            await Viewer.registerPlugin(
+                "perspective-viewer-summary",
+                "./perspective-viewer-summary.js",
+            );
+
+            const worker = await perspective.worker();
+
+            const table = await worker.table([
+                {
+                    Product: "Laptop",
+                    Region: "East",
+                    Sales: 1200,
+                },
+                {
+                    Product: "Phone",
+                    Region: "West",
+                    Sales: 850,
+                },
+                {
+                    Product: "Monitor",
+                    Region: "North",
+                    Sales: 430,
+                },
+            ]);
+
+            const viewer = document.querySelector(
+                "perspective-viewer",
+            );
+
+            await viewer.load(table);
+
+                await viewer.restore({
+                    title: "Custom Plugin Export Demo",
+                    plugin: "Summary",
+                    columns: ["Sales"],
+                    settings: true,
+                });
+                
+        </script>
+
+        <style>
+            html,
+            body,
+            perspective-viewer {
+                width: 100%;
+                height: 100%;
+                margin: 0;
+            }
+
+            .summary {
+                box-sizing: border-box;
+                height: 100%;
+                padding: 40px;
+                font-family: Arial, sans-serif;
+            }
+
+            .summary h1 {
+                margin-top: 0;
+            }
+        </style>
+    </head>
+
+    <body>
+        <perspective-viewer></perspective-viewer>
+    </body>
+</html>
